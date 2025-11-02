@@ -30,10 +30,12 @@ export default function HomePage() {
             </Link>
           </nav>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm">
-              Sign In
-            </Button>
-            <Link href="/library">
+            <Link href="/auth/login">
+              <Button variant="ghost" size="sm">
+                Sign In
+              </Button>
+            </Link>
+            <Link href="/auth/sign-up">
               <Button size="sm">Get Started</Button>
             </Link>
           </div>
@@ -55,7 +57,7 @@ export default function HomePage() {
             lessons, and adaptive practice.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Link href="/library">
+            <Link href="/auth/sign-up">
               <Button size="lg" className="text-base px-8">
                 Start Learning Free
               </Button>
@@ -211,7 +213,7 @@ export default function HomePage() {
             Join thousands of students already mastering their textbooks with AI-powered personalized learning.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/library">
+            <Link href="/auth/sign-up">
               <Button size="lg" className="text-base px-8">
                 Get Started Free
               </Button>
