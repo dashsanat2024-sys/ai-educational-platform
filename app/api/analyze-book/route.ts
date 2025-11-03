@@ -45,13 +45,47 @@ const bookAnalysisSchema = z.object({
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
+    console.log("[v0] PDF buffer size:", buffer.length, "bytes")
+
+    const pdfHeader = buffer.toString("utf8", 0, 5)
+    console.log("[v0] File header:", pdfHeader)
+
+    if (!pdfHeader.startsWith("%PDF-")) {
+      throw new Error("File is not a valid PDF (invalid header)")
+    }
+
+    console.log("[v0] Valid PDF header detected, parsing...")
+
     // Dynamic import of pdf-parse
     const pdfParse = (await import("pdf-parse")).default
-    const data = await pdfParse(buffer)
+    console.log("[v0] pdf-parse loaded successfully")
+
+    const data = await pdfParse(buffer, {
+      max: 0, // Parse all pages
+    })
+
+    console.log("[v0] PDF parsed successfully")
+    console.log("[v0] - Pages:", data.numpages)
+    console.log("[v0] - Text length:", data.text.length)
+    console.log("[v0] - First 200 chars:", data.text.substring(0, 200))
+
     return data.text
   } catch (error) {
-    console.error("[v0] PDF parsing error:", error)
-    throw new Error("Failed to extract text from PDF")
+    console.error("[v0] PDF parsing error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    })
+
+    if (error instanceof Error) {
+      if (error.message.includes("invalid header")) {
+        throw new Error("File is not a valid PDF format")
+      }
+      if (error.message.includes("encrypted")) {
+        throw new Error("PDF is password-protected or encrypted")
+      }
+    }
+
+    throw new Error("Failed to extract text from PDF. The file may be corrupted, image-based, or not a valid PDF.")
   }
 }
 
@@ -65,6 +99,12 @@ export async function POST(req: Request) {
     if (!file) {
       console.error("[v0] No file provided")
       return Response.json({ error: "No file provided" }, { status: 400 })
+    }
+
+    const fileName = file.name.toLowerCase()
+    if (!fileName.endsWith(".pdf")) {
+      console.error("[v0] Invalid file type:", file.name)
+      return Response.json({ error: "Only PDF files are supported. Please upload a .pdf file." }, { status: 400 })
     }
 
     const maxSize = 10 * 1024 * 1024 // 10MB
@@ -89,7 +129,10 @@ export async function POST(req: Request) {
       console.log("[v0] Text extracted, length:", textContent.length, "characters")
 
       if (!textContent || textContent.trim().length < 100) {
-        throw new Error("Insufficient text content extracted from PDF")
+        console.error("[v0] Insufficient text content. PDF may be image-based.")
+        throw new Error(
+          "This PDF appears to contain mostly images with little or no extractable text. Please upload a text-based PDF or a textbook with readable text content.",
+        )
       }
     } catch (error) {
       console.error("[v0] Text extraction failed:", error)
@@ -97,7 +140,8 @@ export async function POST(req: Request) {
         {
           error: "Failed to extract text from PDF",
           details: error instanceof Error ? error.message : "Unknown error",
-          suggestion: "Please ensure the PDF contains readable text (not just images)",
+          suggestion:
+            "Please ensure the PDF:\n• Contains readable text (not just scanned images)\n• Is not password-protected\n• Is a valid PDF file\n• Is an educational textbook or book",
         },
         { status: 400 },
       )
