@@ -121,13 +121,18 @@ export default function LibraryPage() {
       return
     }
 
-    if (file.size > 100 * 1024 * 1024) {
-      setUploadError("File size must be less than 100MB")
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    if (file.size > maxSize) {
+      setUploadError(
+        `File size must be less than 10MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB. Please use a smaller file or split your textbook into chapters.`,
+      )
       return
     }
 
     setIsUploading(true)
     setUploadError(null)
+
+    console.log("[v0] Starting upload:", file.name, `(${(file.size / 1024 / 1024).toFixed(2)}MB)`)
 
     try {
       const newBook: Book = {
@@ -148,16 +153,22 @@ export default function LibraryPage() {
       const formData = new FormData()
       formData.append("file", file)
 
+      console.log("[v0] Sending file to API...")
+
       const response = await fetch("/api/analyze-book", {
         method: "POST",
         body: formData,
       })
 
       if (!response.ok) {
-        throw new Error("Failed to analyze book")
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.error || `Server error: ${response.status}`
+        throw new Error(errorMessage)
       }
 
       const { analysis } = await response.json()
+
+      console.log("[v0] Analysis received:", analysis.title)
 
       setBooks((prevBooks) =>
         prevBooks.map((book) =>
@@ -325,7 +336,7 @@ export default function LibraryPage() {
                       onChange={handleFileInputChange}
                       className="hidden"
                     />
-                    <p className="text-sm text-white/40 mt-4">Supports PDF and EPUB formats (Max 100MB)</p>
+                    <p className="text-sm text-white/40 mt-4">Supports PDF and EPUB formats (Max 10MB)</p>
                   </>
                 )}
               </div>

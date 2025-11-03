@@ -2,6 +2,8 @@ import { generateObject } from "ai"
 import { z } from "zod"
 
 export const maxDuration = 60
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 
 const bookAnalysisSchema = z.object({
   title: z.string().describe("The title of the book"),
@@ -50,10 +52,22 @@ export async function POST(req: Request) {
       return Response.json({ error: "No file provided" }, { status: 400 })
     }
 
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    if (file.size > maxSize) {
+      return Response.json(
+        { error: `File size must be less than 10MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB` },
+        { status: 413 },
+      )
+    }
+
+    console.log("[v0] Analyzing book:", file.name, `(${(file.size / 1024 / 1024).toFixed(2)}MB)`)
+
     // Convert file to base64
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
     const base64 = buffer.toString("base64")
+
+    console.log("[v0] File converted to base64, sending to AI...")
 
     // Use AI SDK to analyze the book
     const { object } = await generateObject({
@@ -77,6 +91,8 @@ export async function POST(req: Request) {
         },
       ],
     })
+
+    console.log("[v0] Analysis complete:", object.title)
 
     return Response.json({ analysis: object })
   } catch (error) {
