@@ -29,11 +29,15 @@ export default function SignUpPage() {
     setError(null)
 
     try {
+      const redirectUrl =
+        process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
+        (typeof window !== "undefined" ? `${window.location.origin}/library` : "/library")
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/library`,
+          emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName,
             role: role,
